@@ -1,0 +1,26 @@
+#include <OneWire.h>
+#include <DallasTemperature.h>
+#define ONE_WIRE_BUS A1 // // Data wire is connected to A1 on Arduino Uno OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature sensors(&oneWire);
+#define trigPin 2 // Define the trigger pin (connected to Arduino digital pin 2) #define echoPin 4 // Define the echo pin (connected to Arduino digital pin 4) void setup() {
+Serial.begin(9600); pinMode(trigPin, OUTPUT); pinMode(echoPin, INPUT); sensors.begin();
+}
+void loop()
+{ sensors.requestTemperatures();
+float temperatureC = sensors.getTempCByIndex(0); delay(2000);
+long duration, distance;
+// Clear the trigger pin digitalWrite(trigPin, LOW); delayMicroseconds(2);
+// Send a 10 microsecond pulse to trigger the ultrasonic sensor digitalWrite(trigPin, HIGH);
+delayMicroseconds(10);
+
+
+digitalWrite(trigPin, LOW);
+// Read the pulse on the echo pin duration = pulseIn(echoPin, HIGH);
+// Check if duration is valid (prevent division by zero) if (duration > 0) {
+// Calculate the distance in centimeters (29.1 microseconds per centimeter) distance = duration / 29.1;
+// Send the data to NodeMCU via hardware serial Serial.print("T:");
+Serial.print(temperatureC); Serial.print(", D:"); Serial.println(distance);
+} else {
+Serial.println("Error: Invalid duration");
+}
+}
