@@ -1,0 +1,109 @@
+#define BLYNK_TEMPLATE_ID "TMPL37gN2hO-G"
+#define BLYNK_TEMPLATE_NAME "NodeMCU"
+#define BLYNK_AUTH_TOKEN "RDEy0V9xTW O6migkq6Y5zAhPEMLPKP"
+#define BLYNK_PRINT Serial
+#define en1Pin D4 // D4 (GPIO4), connected to EN1 
+#define in1Pin D5 // D5 (GPIO5), connected to IN1
+#define in2Pin D6 // D6 (GPIO6), connected to IN2 
+#define en2Pin D3 // D4 (GPIO4), connected to EN1
+#define in3Pin D7 // D5 (GPIO5), connected to IN1
+#define in4Pin D8 // D6 (GPIO6), connected to IN2 
+#include <ESP8266WiFi.h>
+#include <BlynkSimpleEsp8266.h>
+#include <Servo.h>
+char auth[] = "RDEy0V9xTW O6migkq6Y5zAhPEMLPKP"; 
+char ssid[] = "Keerthana";
+char pass[] = "hello123"; int buttonState;
+bool isV0Toggled = false; // Initialize the state of V0
+int receivedDistance = 0; // Initialize receivedDistance
+float receivedTemperature=0.0;
+Servo myservo;
+void setup() {
+myservo.attach(D1); // Attach the servo to digital pin D1 Serial.begin(9600);
+pinMode(en1Pin, OUTPUT);
+pinMode(in1Pin, OUTPUT); 
+pinMode(in2Pin, OUTPUT); 
+pinMode(en2Pin, OUTPUT);
+pinMode(in3Pin, OUTPUT); 
+pinMode(in4Pin, OUTPUT);
+// Connect to Wi-Fi
+WiFi.begin(ssid, pass);
+Serial.println(); 
+Serial.print("Connecting to ");
+Serial.println(ssid);
+while (WiFi.status() != WL_CONNECTED)
+{ delay(500); Serial.print(".");
+}
+Serial.println(""); 
+Serial.println("Wi-Fi connected.");
+Serial.println("IP address: "); 
+Serial.println(WiFi.localIP()); 
+Blynk.begin(auth, ssid, pass);
+}
+void loop()
+{
+Blynk.run(); // Run Blynk
+display();
+}
+BLYNK_WRITE(V0)
+{
+int buttonState = param.asInt(); // Get the new button state (0 or 1) if (buttonState == 1)
+{
+// Button is pressed, perform action when V0 is turned ON 
+isV0Toggled = 1; // Update the state of V0
+myservo.write(0); // Move the servo to 0 degrees 
+Serial.println("Feeding...");
+delay(2000); // Wait for 2 second
+myservo.write(180); // Move the servo to 90 degrees
+} else
+{
+// Button is released, perform action when V0 is turned OFF 
+isV0Toggled = false; // Update the state of V0
+}
+}
+BLYNK_WRITE(V2)
+{
+int buttonState = param.asInt(); // Get the new button state (0 or 1) 
+if (buttonState == 1)
+{
+digitalWrite(en1Pin, LOW); // Disable the motor 
+digitalWrite(en2Pin, LOW); // Disable the motor 
+Serial.println("Cleaning Started");
+Serial.println("Discharging...");
+while(receivedDistance<=17)
+{
+digitalWrite(en2Pin, HIGH); // Enable the motor 
+digitalWrite(in3Pin, HIGH); // Set direction 
+digitalWrite(in4Pin, LOW);
+display();
+}
+digitalWrite(en2Pin, LOW); 
+Serial.println("Refilling...");
+digitalWrite(en1Pin, HIGH); 
+while(receivedDistance>=6)
+{
+digitalWrite(in1Pin, HIGH); // Set direction 
+digitalWrite(in2Pin, LOW);
+display();
+}
+digitalWrite(en1Pin, LOW); 
+Serial.println("Cleaning Completed.!");
+// Blynk.logEvent("Cleaning Completed.!")
+int buttonState = param.asInt();
+}
+}
+void display()
+{
+if (Serial.available() > 0)
+{
+String data = Serial.readStringUntil('\n');
+int temperaturePos = data.indexOf("T:"); 
+int distancePos = data.indexOf("D:");
+if (temperaturePos != -1 && distancePos != -1)
+{
+receivedTemperature = data.substring(temperaturePos + 2, distancePos).toFloat(); 
+receivedDistance = data.substring(distancePos + 2).toInt();
+Blynk.virtualWrite(V1, receivedTemperature); // Send temperature to Blynk V1
+}
+}
+}
